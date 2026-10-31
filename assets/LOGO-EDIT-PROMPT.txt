@@ -1,0 +1,3 @@
+Edit the supplied Decido logo. Change ONLY the dark lettering of the word "Decido" to the same vivid red-orange color as the outer location pin on its left. Use a consistent red-orange fill on all six letters, preserving the exact original wordmark typography, letter shapes, placement, size, spacing, canvas proportions, and all icon details. Preserve the location pin, plate, utensils and checkmark exactly. Keep the existing genuinely transparent background and clean antialiased edges. No background rectangle, no new text, no border, no shadow. The red-orange wordmark should be visible on both white and black backgrounds.
+
+Tool: built-in image generation; transparent background.

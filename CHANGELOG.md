@@ -13,6 +13,10 @@ Decido is currently a prototype. No historical release numbers or dates have bee
 - Decido logo combining a location pin, plate and checkmark.
 - Changelog for recording future changes.
 
+### Changed
+
+- Updated the Decido wordmark to match the location pin's red-orange color, retaining a transparent background for use on light and dark backgrounds.
+
 ### Clarified
 
 - The project is an early prototype developed using Google AI Studio.
