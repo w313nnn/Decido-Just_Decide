@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // User profile documents
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasAll(['email', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['email', 'createdAt'])
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 128;
+      allow update: if isOwner(userId)
+        && request.resource.data.email == resource.data.email;
+      allow delete: if isOwner(userId);
+
+      // User's logged meal decisions
+      match /decisions/{decisionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(decisionId)
+          && request.resource.data.keys().hasAll(['userId', 'foodItemId', 'foodItemName', 'price', 'decidedAt'])
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.foodItemId is string
+          && request.resource.data.foodItemId.size() <= 64
+          && request.resource.data.foodItemName is string
+          && request.resource.data.foodItemName.size() <= 128
+          && request.resource.data.price is number
+          && request.resource.data.price >= 0
+          && (!('emoji' in request.resource.data) || (request.resource.data.emoji is string && request.resource.data.emoji.size() <= 16))
+          && (!('category' in request.resource.data) || (request.resource.data.category is string && request.resource.data.category.size() <= 32))
+          && (!('locationName' in request.resource.data) || (request.resource.data.locationName is string && request.resource.data.locationName.size() <= 256))
+          && (!('reason' in request.resource.data) || (request.resource.data.reason is string && request.resource.data.reason.size() <= 256))
+          && (!('campusId' in request.resource.data) || (request.resource.data.campusId is string && request.resource.data.campusId.size() <= 64));
+        allow update: if isOwner(userId)
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with email and preferences",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of account creation"
+        }
+      },
+      "required": ["email", "createdAt"]
+    },
+    "DecisionRecord": {
+      "title": "DecisionRecord",
+      "description": "Logged meal decision for a user",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "User ID of the decision maker",
+          "maxLength": 128
+        },
+        "foodItemId": {
+          "type": "string",
+          "description": "ID of the food item",
+          "maxLength": 64
+        },
+        "foodItemName": {
+          "type": "string",
+          "description": "Name of the meal",
+          "maxLength": 128
+        },
+        "emoji": {
+          "type": "string",
+          "description": "Emoji representing the meal",
+          "maxLength": 16
+        },
+        "category": {
+          "type": "string",
+          "description": "Category: food, drink, or dessert",
+          "maxLength": 32
+        },
+        "price": {
+          "type": "number",
+          "description": "Price in RM"
+        },
+        "locationName": {
+          "type": "string",
+          "description": "Location of the food item",
+          "maxLength": 256
+        },
+        "decidedAt": {
+          "type": "string",
+          "description": "ISO timestamp of decision"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for recommendation",
+          "maxLength": 256
+        },
+        "campusId": {
+          "type": "string",
+          "description": "Campus identifier",
+          "maxLength": 64
+        }
+      },
+      "required": ["userId", "foodItemId", "foodItemName", "price", "decidedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile data"
+    },
+    "/users/{userId}/decisions/{decisionId}": {
+      "schema": "DecisionRecord",
+      "description": "Meal decisions history per user"
+    }
+  }
+}

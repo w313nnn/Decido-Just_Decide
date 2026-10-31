@@ -1,0 +1,8 @@
+{
+  "name": "Decido - Just decide",
+  "description": "Decido helps you make everyday food decisions based on your budget, preferences, and what you\u0027ve had recently. Less thinking, one clear choice.\n",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
