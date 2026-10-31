@@ -1,0 +1,10 @@
+Generated with the built-in image generation tool.
+
+Use case: logo-brand
+Asset type: finished logo image for a university-focused food decision app and GitHub README.
+Primary request: Design an original, friendly, modern logo for "Decido", an early prototype helping university students decide on nearby food, drinks and desserts based on budget and preferences, starting at UTAR Sungai Long with future multi-university ambition.
+Subject: One strong simple symbol combining a location pin with a clear checkmark and a subtle plate-like circular interior; accompanying wordmark Decido.
+Style/medium: crisp flat vector-like graphic, confident rounded geometry, highly legible rounded sans-serif lettering, minimal and recognizable at app-icon size.
+Composition/framing: single horizontal logo lockup centered with generous clear space, symbol left and wordmark right. Make logo large enough to read. No presentation board.
+Text (verbatim): "Decido"
+Constraints: transparent background; only the icon and wordmark; no slogan, no university crests, no affiliation claims, no mockup, no gradients, no shadows, no watermark. Use a restrained appetizing warm accent for symbol and dark readable wordmark.
