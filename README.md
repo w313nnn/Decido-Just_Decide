@@ -104,7 +104,10 @@ The Decido logo is in [`assets/decido-logo.png`](assets/decido-logo.png). Its lo
 
 Decido is an independent student project. Mentioning UTAR Sungai Long identifies the initial campus focus and does not imply university endorsement or affiliation.
 
-## License
+## Permissions and licensing
 
-A license has not been specified in this README. Check the repository for a `LICENSE` file and its terms before reusing code or assets.
+Decido is a personal portfolio project shared for viewing and reference. No general open-source license is granted for the author's original contributions.
 
+Except where permitted by applicable law, GitHub’s terms, or an applicable existing license, please obtain the author's permission before reusing, modifying or redistributing those contributions.
+
+Third-party code and dependencies remain subject to their respective licenses.
