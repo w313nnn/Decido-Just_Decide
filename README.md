@@ -48,9 +48,33 @@ These are development directions rather than committed release dates.
 
 ## Running the project
 
-The prototype was developed using Google AI Studio. Repository-specific installation commands, dependencies, configuration and deployment instructions have not yet been documented here.
+Use Node.js 22.12 or newer and npm. Install the pinned dependency tree:
 
-Before running or deploying a build, follow the instructions supplied with its source code. Keep API keys and other secrets out of version control.
+```sh
+npm ci
+npm run dev
+```
+
+Open the local address printed in the terminal (normally http://localhost:3000).
+
+Guest mode, the numbered decision flow and the description shortcut work without a Gemini key. The shortcut recognises simple words locally and asks you to review the result. Suggestions come from the bundled Sungai Long sample list; they are not a live search around your device.
+
+To enable the optional map preview, copy `.env.example` to `.env.local`, set `VITE_GOOGLE_MAPS_API_KEY` to your browser-restricted Google Maps key, and restart the development server. Without a key, suggestions still have Google Maps search links. Never put private Gemini or service-account keys in browser environment variables.
+
+Account sign-in and cloud history use the Firebase project in `firebase-applet-config.json`. To use your own project, replace that configuration, enable the required sign-in providers, allow your deployment domain, and deploy the repository's Firestore rules to the configured database. A failed sign-in does not create an account session; guest mode is a separate choice.
+
+History and settings are separated by account in this browser. Guest data stays on this device. Account history syncs to Firestore; settings remain local to the browser and account. Unsynced saves and removals are kept locally for retry. Browser storage is not encrypted, so use your own device for personal history. Old shared prototype storage is left untouched but is not automatically assigned to an account.
+
+```sh
+npm run lint
+npm test
+npm run build
+npm run test:browser
+```
+
+The browser checks use Playwright. Run `npx playwright install chromium` once, or set `DECIDO_BROWSER_PATH` to an installed Chrome/Edge executable. Browser tests start the local development server automatically.
+
+See [the review notes](docs/REVIEW.md) for the fixes, validation and remaining checks before a public launch.
 
 ## Feedback and contributions
 
@@ -75,3 +99,4 @@ Decido is an independent student project. Mentioning UTAR Sungai Long identifies
 ## License
 
 A license has not been specified in this README. Check the repository for a `LICENSE` file and its terms before reusing code or assets.
+

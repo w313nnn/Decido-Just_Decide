@@ -1,33 +1,28 @@
-import { UserPreferences } from '../types/food';
-
-const PREFS_STORAGE_KEY = 'makanmana_user_preferences_v1';
-
+import { DietaryTag, UserPreferences } from '../types/food';
+import { readStored, writeStored } from './storage';
 export const DEFAULT_PREFERENCES: UserPreferences = {
-  campusId: 'utar-sungai-long',
-  defaultBudgetFood: 10,
-  defaultBudgetDrink: 5,
-  defaultBudgetDessert: 5,
-  dietaryRestrictions: [],
-  dislikedItems: [],
-  showSwipeGuidance: true,
+  campusId: 'utar-sungai-long', defaultBudgetFood: 10, defaultBudgetDrink: 5,
+  defaultBudgetDessert: 5, dietaryRestrictions: [], dislikedItems: [], showSwipeGuidance: true,
 };
-
-export function getPreferences(): UserPreferences {
-  try {
-    const raw = localStorage.getItem(PREFS_STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(DEFAULT_PREFERENCES));
-      return DEFAULT_PREFERENCES;
-    }
-    return { ...DEFAULT_PREFERENCES, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_PREFERENCES;
-  }
+const tags: DietaryTag[] = ['halal', 'pork-free', 'vegetarian', 'beef-free'];
+function validBudget(value: unknown, fallback: number) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 1 && value <= 100 ? value : fallback;
 }
-
+function normalize(value: Partial<UserPreferences> | null): UserPreferences {
+  const p = value && typeof value === 'object' ? value : {};
+  return {
+    campusId: 'utar-sungai-long',
+    defaultBudgetFood: validBudget(p.defaultBudgetFood, 10),
+    defaultBudgetDrink: validBudget(p.defaultBudgetDrink, 5),
+    defaultBudgetDessert: validBudget(p.defaultBudgetDessert, 5),
+    dietaryRestrictions: Array.isArray(p.dietaryRestrictions) ? p.dietaryRestrictions.filter(t => tags.includes(t)) : [],
+    dislikedItems: Array.isArray(p.dislikedItems) ? p.dislikedItems.filter(t => typeof t === 'string') : [],
+    showSwipeGuidance: p.showSwipeGuidance !== false,
+  };
+}
+export function getPreferences(): UserPreferences { return normalize(readStored('preferences', null)); }
 export function savePreferences(prefs: Partial<UserPreferences>): UserPreferences {
-  const current = getPreferences();
-  const updated = { ...current, ...prefs };
-  localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(updated));
+  const updated = normalize({ ...getPreferences(), ...prefs });
+  writeStored('preferences', updated);
   return updated;
 }

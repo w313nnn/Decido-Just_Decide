@@ -12,7 +12,8 @@ interface ScoredCandidate {
 
 export function getRecommendation(request: RecommendationRequest): RecommendationResult | null {
   const { category, budget, preference, campusId = 'utar-sungai-long', excludeItemIds = [] } = request;
-  const history = getHistory();
+  if (!Number.isFinite(budget) || budget < 1 || budget > 100) return null;
+  const history = getHistory().filter(record => record.campusId === campusId);
   const preferences = getPreferences();
 
   // 1. Base Database filtering by Campus and Category
@@ -24,29 +25,13 @@ export function getRecommendation(request: RecommendationRequest): Recommendatio
     return null;
   }
 
-  // Exclude items explicitly skipped during this session (e.g., clicking "Try another")
-  if (excludeItemIds.length > 0) {
-    const unexcluded = pool.filter((item) => !excludeItemIds.includes(item.id));
-    // If user skipped all, reset exclusion pool
-    if (unexcluded.length > 0) {
-      pool = unexcluded;
-    }
-  }
-
-  // 2. Dietary Restrictions filter (from user preferences)
-  if (preferences.dietaryRestrictions && preferences.dietaryRestrictions.length > 0) {
-    const dietaryFiltered = pool.filter((item) =>
-      preferences.dietaryRestrictions.every((tag) => item.dietary.includes(tag))
-    );
-    if (dietaryFiltered.length > 0) {
-      pool = dietaryFiltered;
-    }
-  }
-
-  // 3. Budget Filter
-  const budgetFiltered = pool.filter((item) => item.price <= budget);
-  const isBudgetStretched = budgetFiltered.length === 0;
-  const candidatePool = isBudgetStretched ? pool : budgetFiltered;
+  // Budgets, restrictions, dislikes and skipped items are hard constraints.
+  pool = pool.filter(item => !excludeItemIds.includes(item.id) &&
+    !preferences.dislikedItems.includes(item.id) && item.price <= budget &&
+    preferences.dietaryRestrictions.every(tag => item.dietary.includes(tag)));
+  if (!pool.length) return null;
+  const candidatePool = pool;
+  const isBudgetStretched = false;
 
   // 4. Analyze recent meals from history to find patterns
   const recentMeals = history.slice(0, 10);
@@ -151,7 +136,7 @@ export function getRecommendation(request: RecommendationRequest): Recommendatio
         break;
 
       case 'refreshing':
-        if (item.subcategory === 'Juice' || item.id === 'sl-mixue-lemonade' || item.id === 'sl-coconut-shake') {
+        if (item.subcategory === 'Juice' || item.subcategory === 'Ice Cream' || item.id === 'sl-mixue-lemonade' || item.id === 'sl-coconut-shake') {
           score += 40;
           preferenceMatched = true;
         }
@@ -165,7 +150,7 @@ export function getRecommendation(request: RecommendationRequest): Recommendatio
         break;
 
       case 'comfort':
-        if (item.popularityScore >= 9.0) {
+        if (category === 'drink' ? /coffee|kopi|teh/i.test(item.name) : item.popularityScore >= 9.0) {
           score += 30;
           preferenceMatched = true;
         }
@@ -209,17 +194,17 @@ export function getRecommendation(request: RecommendationRequest): Recommendatio
     } else if (preferenceMatched && preference === 'spicy') {
       reason = `Spicy craving within your budget`;
     } else if (preferenceMatched && preference === 'soup') {
-      reason = `Warm soup comfort within your budget`;
+      reason = `Soup within your budget`;
     } else if (preferenceMatched && preference === 'noodles') {
       reason = `Noodle craving within your budget`;
     } else if (preferenceMatched && preference === 'rice') {
       reason = `Hearty rice within your budget`;
     } else if (preferenceMatched && preference === 'light') {
-      reason = `Light & clean meal for your day`;
+      reason = `A lighter option within your budget`;
     } else if (item.walkingMinutesFromCampus <= 2) {
-      reason = `Fits budget · 2 min walk from campus`;
+      reason = `Within your budget; a short walk from campus`;
     } else {
-      reason = `Fits your budget · fresh pick for today`;
+      reason = `Within your budget`;
     }
 
     return { item, score, reason, recencyNote };
@@ -239,3 +224,4 @@ export function getRecommendation(request: RecommendationRequest): Recommendatio
     remainingCandidatesCount: Math.max(0, scored.length - 1),
   };
 }
+
