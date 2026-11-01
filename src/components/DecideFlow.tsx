@@ -66,8 +66,8 @@ export function DecideFlow({ onDecide, defaultBudgets, initialSelection }: Props
         else onDecide(category, Math.round(amount * 100) / 100, preference);
       }}>
         <p className="eyebrow" data-reveal>Step {step} of 3</p>
-        <h2 ref={heading} tabIndex={-1} data-reveal>{step === 1 ? 'What are you looking for?' : step === 2 ? 'How much would you like to spend?' : 'What do you feel like?'}</h2>
-        <p className="muted" data-reveal>{step === 1 ? 'Pick one to get started.' : step === 2 ? 'This is your maximum budget for one item. We won’t raise it for you.' : 'Choose a craving, or leave it on Anything.'}</p>
+        <h2 ref={heading} tabIndex={-1} data-reveal>{step === 1 ? 'What are you looking for?' : step === 2 ? 'What’s your budget?' : 'What do you feel like?'}</h2>
+        <p className="muted" data-reveal>{step === 1 ? 'Pick one to get started.' : step === 2 ? 'Your maximum for one item.' : 'Choose a craving, or leave it on Anything.'}</p>
         {step === 1 && <fieldset data-reveal><legend className="sr-only">Category</legend><div className="choice-grid three">
           {([{id:'food',label:'Food',emoji:'🍚'}, {id:'drink',label:'Drink',emoji:'🥤'}, {id:'dessert',label:'Dessert',emoji:'🍰'}] as const).map(c =>
             <label key={c.id} className={`choice ${category === c.id ? 'selected' : ''}`}>

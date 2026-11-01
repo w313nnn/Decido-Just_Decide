@@ -10,6 +10,7 @@ import { FoodCategory, FoodPreference, RecommendationResult } from './types/food
 import { getRecommendation } from './services/recommendationEngine';
 import { getHistory, saveDecision, removeDecision, clearAllHistory, subscribeToUserDecisions } from './services/historyService';
 import { getPreferences, savePreferences } from './services/preferencesService';
+import { useMobileViewport } from './hooks/useMobileViewport';
 const StatsView = React.lazy(() => import('./components/StatsView').then(module => ({default:module.StatsView})));
 const SettingsView = React.lazy(() => import('./components/SettingsView').then(module => ({default:module.SettingsView})));
 const MapProvider = React.lazy(() => import('./components/MapProvider'));
@@ -88,6 +89,7 @@ function AuthenticatedApp() {
   return user ? <SessionApp key={user.uid} /> : <AuthView />;
 }
 export default function App() {
+  useMobileViewport();
   const content=<AuthProvider><AuthenticatedApp /></AuthProvider>;
   const mapsKey=import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   return mapsKey ? <React.Suspense fallback={<main className="auth-page" role="status">Loading Decido…</main>}><MapProvider apiKey={mapsKey}>{content}</MapProvider></React.Suspense> : content;

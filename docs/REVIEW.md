@@ -47,6 +47,8 @@ Active interface copy was edited using the humanizer skill: short instructions, 
 
 ## Checks still needed before public use
 
+Phone layout changes and the screen-size test matrix are documented in [MOBILE.md](MOBILE.md).
+
 - Test successful sign-in, sign-out across tabs, account switching and multi-device Firestore sync against a test Firebase project. Automated browser tests do not use real accounts or write to the production database.
 - Exercise offline cloud writes, denied writes, reconnects and histories larger than 450 records against the Firebase emulator or a staging database. The pending-merge logic has local regression coverage; these integrations still need live validation.
 - Confirm Google Maps API restrictions, billing and place matches with a configured staging key. The default browser tests run without a Maps key; the optional map dialog is not a verified venue lookup.

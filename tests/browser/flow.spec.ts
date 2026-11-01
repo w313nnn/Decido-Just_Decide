@@ -66,7 +66,7 @@ test('mobile layout, reduced motion, dietary settings and denied sign-in', async
   await page.getByLabel('Vegetarian', { exact: true }).check();
   await page.getByRole('navigation').getByRole('button', { name: 'Decide', exact: true }).click();
   await page.getByRole('button', { name: 'Next: set a budget' }).click();
-  await expect(page.getByRole('heading', { name: 'How much would you like to spend?' })).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'What’s your budget?' })).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: '../../outputs/decido-mobile.png', fullPage: true });
 });

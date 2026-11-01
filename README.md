@@ -46,6 +46,14 @@ Multi-university coverage is a future goal, not a current availability claim.
 
 These are development directions rather than committed release dates.
 
+## Designed for phones
+
+Decido's layout starts with phone screens. The numbered flow, large touch controls and bottom navigation adapt to small and large displays, portrait and landscape. Text can wrap and grow without forcing a fixed screen height. Notches and home indicators get safe-area spacing, and the page reserves the measured height of the bottom navigation.
+
+On browsers that report keyboard changes through VisualViewport, navigation moves out of the way while typing. Form fields use readable text sizes, and browser zoom remains available. Tablets and desktop screens keep a centred layout.
+
+The layout checks cover 12 viewport sizes, from 320×480 to 1280×800, plus enlarged text, navigation resizing and a simulated keyboard. Emulator checks do not replace hands-on testing on physical phones.
+
 ## Running the project
 
 Use Node.js 22.12 or newer and npm. Install the pinned dependency tree:
@@ -72,7 +80,7 @@ npm run build
 npm run test:browser
 ```
 
-The browser checks use Playwright. Run `npx playwright install chromium` once, or set `DECIDO_BROWSER_PATH` to an installed Chrome/Edge executable. Browser tests start the local development server automatically.
+The browser checks use Playwright. Run `npx playwright install chromium` once, or set `DECIDO_BROWSER_PATH` to an installed Chrome/Edge executable. Browser tests start the local development server automatically. Set `DECIDO_TEST_PORT` to use another port. To check the WebKit engine, run `npx playwright install webkit`, then set `DECIDO_TEST_BROWSER=webkit` before running the browser suite.
 
 See [the review notes](docs/REVIEW.md) for the fixes, validation and remaining checks before a public launch.
 

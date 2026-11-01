@@ -6,6 +6,17 @@ Decido is currently a prototype. No historical release numbers or dates have bee
 
 ## [Unreleased]
 
+### Mobile layout
+
+- Made phone layouts the default, with compact bottom navigation in both portrait and landscape.
+- Added safe-area spacing for notches and home indicators and reserved the navigation's measured height.
+- Improved the header, budget presets, long-text wrapping and form controls on narrow screens.
+- Kept primary touch controls at least 44px high, with larger category choices and readable form text.
+- Made confirmation and map dialogs scroll within the available screen height.
+- Added VisualViewport handling to hide bottom navigation when a reported software keyboard would compete for space.
+- Added layout checks across 12 screen sizes, 200% text, navigation height changes and simulated keyboard opening and closing.
+
+
 ### Fixed
 
 - Dietary restrictions, disliked items and the entered budget now remain mandatory when choosing a suggestion.
