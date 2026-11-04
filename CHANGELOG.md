@@ -2,14 +2,25 @@
 
 Record meaningful changes to Decido here so contributors and users can follow the project's progress.
 
-Decido is currently a prototype. No historical release numbers or dates have been reconstructed. The entries below describe this documentation and branding package; they do not certify implemented app features.
+Decido is currently a prototype. No historical release numbers or dates have been reconstructed. Entries record implemented changes and documentation updates; sample recommendations still need real-world validation.
 
 ## [Unreleased]
+
+### Suggestion card design
+
+- Refined the palette around sampled logo orange, amber, coral and cream, replacing the green theme.
+- Kept Fraunces headings and introduced Lora descriptions for a more distinctive reading style.
+
+- Added peach, amber and coral suggestion cards for food, drinks and desserts.
+- Use Fraunces headings, Lora descriptions and Plus Jakarta Sans controls, with font files and licenses served locally.
+- Grouped the item name, listed price, walking estimate, budget, recommendation reason and location for easier reading.
+- Updated the saved-choice screen to match and preserved reduced-motion support and touch targets.
+- Made the test site available to anyone with its link.
 
 ### Test hosting
 
 - Added Sites hosting configuration and a phone testing guide.
-- Added a private hosted test URL for the current mobile interface.
+- Published the public [Decido test site](https://decido-test.urbanrain4.chatgpt.site) for browser and phone testing, and linked it from the README.
 - Updated the transitive gRPC dependency used by Firebase to a patched release.
 
 ### Mobile layout

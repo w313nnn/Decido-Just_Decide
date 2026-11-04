@@ -56,7 +56,7 @@ The layout checks cover 12 viewport sizes, from 320×480 to 1280×800, plus enla
 
 ## Test site
 
-The hosted test site is at https://decido-test.urbanrain4.chatgpt.site and is private to its owner. Start with **Try Decido as a guest**. See [the testing guide](docs/TESTING.md) for phone checks, bug reports and publishing updates.
+Try the **[Decido test site](https://decido-test.urbanrain4.chatgpt.site)** in your browser. It is available to anyone with the link. Start with **Try Decido as a guest**. See [the testing guide](docs/TESTING.md) for phone checks, bug reports and publishing updates.
 
 ## Running the project
 

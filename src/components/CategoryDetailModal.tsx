@@ -620,3 +620,4 @@ export const CategoryDetailModal: React.FC<CategoryDetailModalProps> = ({
     </AnimatePresence>
   );
 };
+

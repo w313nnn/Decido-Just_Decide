@@ -2,7 +2,7 @@
 
 Test site: https://decido-test.urbanrain4.chatgpt.site
 
-The Site is private to its owner. Hosting access is separate from Decido's own account sign-in. Start with **Try Decido as a guest** to test the decision flow without configuring Firebase sign-in for the new domain.
+Anyone with the link can open the Site. Decido's own account sign-in is optional. Start with **Try Decido as a guest** to test the decision flow without configuring Firebase sign-in for the new domain.
 
 ## First test on your phone
 

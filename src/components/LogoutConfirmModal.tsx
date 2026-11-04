@@ -122,3 +122,4 @@ export const LogoutConfirmModal: React.FC<LogoutConfirmModalProps> = ({
     </AnimatePresence>
   );
 };
+

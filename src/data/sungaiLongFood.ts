@@ -652,3 +652,4 @@ export const SUNGAI_LONG_FOOD_DATABASE: FoodItem[] = [
     popularityScore: 9.1,
   },
 ];
+

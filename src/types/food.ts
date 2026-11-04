@@ -84,3 +84,4 @@ export interface RecommendationResult {
   recencyNote?: string;
   remainingCandidatesCount: number;
 }
+
