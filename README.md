@@ -54,6 +54,10 @@ On browsers that report keyboard changes through VisualViewport, navigation move
 
 The layout checks cover 12 viewport sizes, from 320×480 to 1280×800, plus enlarged text, navigation resizing and a simulated keyboard. Emulator checks do not replace hands-on testing on physical phones.
 
+## Test site
+
+The hosted test site is at https://decido-test.urbanrain4.chatgpt.site and is private to its owner. Start with **Try Decido as a guest**. See [the testing guide](docs/TESTING.md) for phone checks, bug reports and publishing updates.
+
 ## Running the project
 
 Use Node.js 22.12 or newer and npm. Install the pinned dependency tree:
@@ -111,3 +115,4 @@ Decido is a personal portfolio project shared for viewing and reference. No gene
 Except where permitted by applicable law, GitHub’s terms, or an applicable existing license, please obtain the author's permission before reusing, modifying or redistributing those contributions.
 
 Third-party code and dependencies remain subject to their respective licenses.
+

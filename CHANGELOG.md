@@ -6,6 +6,12 @@ Decido is currently a prototype. No historical release numbers or dates have bee
 
 ## [Unreleased]
 
+### Test hosting
+
+- Added Sites hosting configuration and a phone testing guide.
+- Added a private hosted test URL for the current mobile interface.
+- Updated the transitive gRPC dependency used by Firebase to a patched release.
+
 ### Mobile layout
 
 - Made phone layouts the default, with compact bottom navigation in both portrait and landscape.
