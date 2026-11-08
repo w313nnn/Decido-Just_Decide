@@ -16,3 +16,4 @@ console.error = (...args: unknown[]) => {
 };
 
 createRoot(document.getElementById('root')!).render(<App />);
+

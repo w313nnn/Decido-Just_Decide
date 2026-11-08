@@ -1,258 +1,122 @@
 import { DecisionRecord, FoodItem } from '../types/food';
 import { doc, setDoc, deleteDoc, collection, onSnapshot, writeBatch } from 'firebase/firestore';
-import { db, auth, handleFirestoreError, OperationType } from './firebase';
+import { db, auth } from './firebase';
+import { readStored, writeStored } from './storage';
 
-const STORAGE_KEY = 'makanmana_decision_history_v1';
-
-// Initial realistic seed history for UTAR Sungai Long so the user immediately experiences
-// the recency penalty algorithm on their first visit without having to manually log 4 days.
-export const DEFAULT_SEED_HISTORY: DecisionRecord[] = [
-  {
-    id: 'seed-hist-1',
-    foodItemId: 'sl-hainan-chicken-rice',
-    foodItemName: 'Steamed Hainanese Chicken Rice',
-    emoji: '🍗',
-    category: 'food',
-    price: 8.5,
-    locationName: 'Kedai Kopi Sungai Long (Jalan SL 1/11)',
-    decidedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // Yesterday
-    reason: 'Quick lunch before 2 PM lecture at KB Block.',
-    campusId: 'utar-sungai-long',
-  },
-  {
-    id: 'seed-hist-2',
-    foodItemId: 'sl-mixue-lemonade',
-    foodItemName: 'Mixue Fresh Squeezed Lemonade',
-    emoji: '🍋',
-    category: 'drink',
-    price: 3.5,
-    locationName: 'Mixue (Jalan SL 1/3, beside KB Block)',
-    decidedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // Yesterday afternoon
-    reason: 'Hot afternoon study break refresher beside campus.',
-    campusId: 'utar-sungai-long',
-  },
-  {
-    id: 'seed-hist-3',
-    foodItemId: 'sl-zap-fan-mixed-rice',
-    foodItemName: 'Economical Mixed Rice (Zap Fan)',
-    emoji: '🍱',
-    category: 'food',
-    price: 7.5,
-    locationName: 'Ah Seng Economy Rice (Jalan SL 1/3, behind Maybank)',
-    decidedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-    reason: 'Budget lunch with 2 greens and 1 tofu meat dish.',
-    campusId: 'utar-sungai-long',
-  },
-  {
-    id: 'seed-hist-4',
-    foodItemId: 'sl-curry-mee',
-    foodItemName: 'Kopitiam Fragrant Curry Mee',
-    emoji: '🍲',
-    category: 'food',
-    price: 9.0,
-    locationName: 'Restoran Good Taste (Jalan SL 1/11)',
-    decidedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
-    reason: 'Rich coconut curry noodles with cockles and tau pok.',
-    campusId: 'utar-sungai-long',
-  },
-];
-
+export function isDecisionRecord(value: unknown): value is DecisionRecord {
+  if (!value || typeof value !== 'object') return false;
+  const r = value as DecisionRecord;
+  return ['id', 'foodItemId', 'foodItemName', 'emoji', 'locationName', 'decidedAt', 'reason', 'campusId']
+    .every(key => typeof r[key as keyof DecisionRecord] === 'string') &&
+    ['food', 'drink', 'dessert'].includes(r.category) && Number.isFinite(r.price) && r.price >= 0 &&
+    Number.isFinite(Date.parse(r.decidedAt));
+}
 export function getHistory(): DecisionRecord[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      // First time initialization: initialize with seed history
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_SEED_HISTORY));
-      return DEFAULT_SEED_HISTORY;
-    }
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return DEFAULT_SEED_HISTORY;
-
-    // Migrate/upgrade previous seed items to accurate real locations
-    return parsed.map((record) => {
-      const matchSeed = DEFAULT_SEED_HISTORY.find((s) => s.id === record.id);
-      if (matchSeed) {
-        return {
-          ...record,
-          locationName: matchSeed.locationName,
-          foodItemName: matchSeed.foodItemName,
-        };
-      }
-      return record;
-    });
-  } catch {
-    return DEFAULT_SEED_HISTORY;
-  }
+  const records = readStored<unknown>('history', []);
+  return Array.isArray(records) ? records.filter(isDecisionRecord)
+    .sort((a, b) => Date.parse(b.decidedAt) - Date.parse(a.decidedAt)) : [];
 }
-
-export function saveDecision(item: FoodItem, customReason?: string): DecisionRecord {
-  const current = getHistory();
-  const newRecord: DecisionRecord = {
-    id: `decision-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    foodItemId: item.id,
-    foodItemName: item.name,
-    emoji: item.emoji,
-    category: item.category,
-    price: item.price,
-    locationName: item.locationName,
-    decidedAt: new Date().toISOString(),
-    reason: customReason || `Decided for today's RM${item.price.toFixed(2)} meal.`,
-    campusId: item.campusId,
+function reportSyncError() {
+  window.dispatchEvent(new CustomEvent('decido-sync-error'));
+}
+interface PendingChanges { saves: DecisionRecord[]; deletes: string[]; }
+function pending(): PendingChanges {
+  const raw = readStored<Partial<PendingChanges> | null>('pending-history', null);
+  return {
+    saves: Array.isArray(raw?.saves) ? raw.saves.filter(isDecisionRecord) : [],
+    deletes: Array.isArray(raw?.deletes) ? raw.deletes.filter(id => typeof id === 'string') : [],
   };
-
-  const updated = [newRecord, ...current];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-
-  // Sync to Firestore if authenticated with real Firebase user
-  if (auth.currentUser && !auth.currentUser.isAnonymous) {
-    const uid = auth.currentUser.uid;
-    const docPath = `users/${uid}/decisions/${newRecord.id}`;
-    setDoc(doc(db, 'users', uid, 'decisions', newRecord.id), {
-      userId: uid,
-      foodItemId: newRecord.foodItemId,
-      foodItemName: newRecord.foodItemName,
-      emoji: newRecord.emoji,
-      category: newRecord.category,
-      price: newRecord.price,
-      locationName: newRecord.locationName,
-      decidedAt: newRecord.decidedAt,
-      reason: newRecord.reason,
-      campusId: newRecord.campusId,
-    }).catch((err) => {
-      handleFirestoreError(err, OperationType.CREATE, docPath);
-    });
-  }
-
-  return newRecord;
 }
-
-export function removeDecision(id: string): DecisionRecord[] {
-  const current = getHistory();
-  const updated = current.filter((r) => r.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-
-  if (auth.currentUser && !auth.currentUser.isAnonymous) {
-    const uid = auth.currentUser.uid;
-    const docPath = `users/${uid}/decisions/${id}`;
-    deleteDoc(doc(db, 'users', uid, 'decisions', id)).catch((err) => {
-      handleFirestoreError(err, OperationType.DELETE, docPath);
-    });
+export function mergeHistory(remote: DecisionRecord[], changes: PendingChanges): DecisionRecord[] {
+  const merged = new Map(remote.map(record => [record.id, record]));
+  changes.saves.forEach(record => merged.set(record.id, record));
+  changes.deletes.forEach(id => merged.delete(id));
+  return [...merged.values()].sort((a,b) => Date.parse(b.decidedAt) - Date.parse(a.decidedAt));
+}
+function flushPending(userId: string) {
+  const changes = pending();
+  changes.saves.forEach(record => {
+    void setDoc(doc(db, 'users', userId, 'decisions', record.id), { ...record, userId }).catch(reportSyncError);
+  });
+  changes.deletes.forEach(id => {
+    void deleteDoc(doc(db, 'users', userId, 'decisions', id)).catch(reportSyncError);
+  });
+}
+export function saveDecision(item: FoodItem, customReason?: string): DecisionRecord {
+  const record: DecisionRecord = {
+    id: `decision-${crypto.randomUUID()}`, foodItemId: item.id, foodItemName: item.name,
+    emoji: item.emoji, category: item.category, price: item.price, locationName: item.locationName,
+    decidedAt: new Date().toISOString(), reason: (customReason || 'Saved your choice.').slice(0, 256), campusId: item.campusId,
+  };
+  writeStored('history', [record, ...getHistory()]);
+  const user = auth.currentUser;
+  if (user && !user.isAnonymous) {
+    const changes = pending();
+    writeStored('pending-history', { ...changes, saves: [...changes.saves, record] });
+    void setDoc(doc(db, 'users', user.uid, 'decisions', record.id), { ...record, userId: user.uid })
+      .catch(reportSyncError);
   }
-
+  return record;
+}
+export function removeDecision(id: string): DecisionRecord[] {
+  const updated = getHistory().filter(r => r.id !== id);
+  writeStored('history', updated);
+  const user = auth.currentUser;
+  if (user && !user.isAnonymous) {
+    const changes = pending();
+    writeStored('pending-history', { saves: changes.saves.filter(record => record.id !== id), deletes: [...new Set([...changes.deletes, id])] });
+    void deleteDoc(doc(db, 'users', user.uid, 'decisions', id)).catch(reportSyncError);
+  }
   return updated;
 }
-
-export function clearAllHistory(): void {
-  const current = getHistory();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
-
-  if (auth.currentUser && !auth.currentUser.isAnonymous && current.length > 0) {
-    const uid = auth.currentUser.uid;
-    const path = `users/${uid}/decisions`;
-    try {
+export async function clearAllHistory(): Promise<void> {
+  const records = getHistory();
+  const user = auth.currentUser;
+  // Firestore batches allow at most 500 writes. Clear locally only after success.
+  if (user && !user.isAnonymous) {
+    for (let start = 0; start < records.length; start += 450) {
       const batch = writeBatch(db);
-      current.forEach((rec) => {
-        batch.delete(doc(db, 'users', uid, 'decisions', rec.id));
-      });
-      batch.commit().catch((err) => {
-        handleFirestoreError(err, OperationType.DELETE, path);
-      });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, path);
+      records.slice(start, start + 450).forEach(r => batch.delete(doc(db, 'users', user.uid, 'decisions', r.id)));
+      await batch.commit();
     }
   }
+  writeStored('history', []);
+  writeStored('pending-history', { saves: [], deletes: [] });
 }
+// Kept for old callers; sample data must never replace personal history.
+export function resetToSeedHistory(): DecisionRecord[] { return getHistory(); }
 
-export function resetToSeedHistory(): DecisionRecord[] {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_SEED_HISTORY));
-
-  if (auth.currentUser && !auth.currentUser.isAnonymous) {
-    const uid = auth.currentUser.uid;
-    const path = `users/${uid}/decisions`;
-    try {
-      const batch = writeBatch(db);
-      DEFAULT_SEED_HISTORY.forEach((rec) => {
-        batch.set(doc(db, 'users', uid, 'decisions', rec.id), {
-          userId: uid,
-          foodItemId: rec.foodItemId,
-          foodItemName: rec.foodItemName,
-          emoji: rec.emoji,
-          category: rec.category,
-          price: rec.price,
-          locationName: rec.locationName,
-          decidedAt: rec.decidedAt,
-          reason: rec.reason,
-          campusId: rec.campusId,
-        });
-      });
-      batch.commit().catch((err) => {
-        handleFirestoreError(err, OperationType.WRITE, path);
-      });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, path);
+export function subscribeToUserDecisions(userId: string, onUpdate: (records: DecisionRecord[]) => void): () => void {
+  flushPending(userId);
+  return onSnapshot(collection(db, 'users', userId, 'decisions'), { includeMetadataChanges: true }, snapshot => {
+    if (auth.currentUser?.uid !== userId) return;
+    const records = snapshot.docs.map(d => ({ ...d.data(), id: d.id })).filter(isDecisionRecord)
+      .sort((a, b) => Date.parse(b.decidedAt) - Date.parse(a.decidedAt));
+    let changes = pending();
+    if (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) {
+      const ids = new Set(records.map(record => record.id));
+      changes = { saves: changes.saves.filter(record => !ids.has(record.id)), deletes: changes.deletes.filter(id => ids.has(id)) };
+      writeStored('pending-history', changes);
     }
-  }
-
-  return DEFAULT_SEED_HISTORY;
+    // Preserve unacknowledged local work; an empty cloud snapshot is still valid.
+    const merged = mergeHistory(records, changes);
+    writeStored('history', merged);
+    onUpdate(merged);
+  }, reportSyncError);
 }
-
-export function subscribeToUserDecisions(
-  userId: string,
-  onUpdate: (records: DecisionRecord[]) => void
-): () => void {
-  const path = `users/${userId}/decisions`;
-  const q = collection(db, 'users', userId, 'decisions');
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      if (!snapshot.empty) {
-        const records: DecisionRecord[] = snapshot.docs.map((docSnap) => {
-          const d = docSnap.data();
-          return {
-            id: docSnap.id,
-            foodItemId: d.foodItemId || '',
-            foodItemName: d.foodItemName || '',
-            emoji: d.emoji || '🍜',
-            category: d.category || 'food',
-            price: Number(d.price) || 0,
-            locationName: d.locationName || '',
-            decidedAt: d.decidedAt || new Date().toISOString(),
-            reason: d.reason || '',
-            campusId: d.campusId || 'utar-sungai-long',
-          };
-        });
-        records.sort((a, b) => new Date(b.decidedAt).getTime() - new Date(a.decidedAt).getTime());
-        onUpdate(records);
-      }
-    },
-    (error) => {
-      handleFirestoreError(error, OperationType.GET, path);
-    }
-  );
-}
-
 export function getDaysAgo(isoDate: string): number {
   const date = new Date(isoDate);
+  if (!Number.isFinite(date.getTime())) return Infinity;
   const now = new Date();
-
-  // Reset hours to compare calendar days
-  const d1 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  const diffTime = d2.getTime() - d1.getTime();
-  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-  return Math.max(0, diffDays);
+  const day = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.max(0, Math.round((today - day) / 86400000));
 }
-
 export function formatRelativeDate(isoDate: string): string {
   const days = getDaysAgo(isoDate);
+  if (!Number.isFinite(days)) return 'Unknown date';
   if (days === 0) return 'Today';
   if (days === 1) return 'Yesterday';
-  if (days === 2) return '2 days ago';
-  if (days === 3) return '3 days ago';
   if (days <= 7) return `${days} days ago`;
-  return new Date(isoDate).toLocaleDateString('en-MY', {
-    month: 'short',
-    day: 'numeric',
-  });
+  return new Date(isoDate).toLocaleDateString('en-MY', { year: 'numeric', month: 'short', day: 'numeric' });
 }

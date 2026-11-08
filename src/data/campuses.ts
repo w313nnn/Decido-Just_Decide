@@ -44,3 +44,4 @@ export const CAMPUSES: Campus[] = [
 ];
 
 export const DEFAULT_CAMPUS_ID = 'utar-sungai-long';
+

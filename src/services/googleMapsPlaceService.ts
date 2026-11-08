@@ -24,7 +24,7 @@ export const UTAR_SL_COORDINATES = {
   lng: 101.794462,
 };
 
-// Known verified coordinates in Bandar Sungai Long commercial hub
+// Approximate street coordinates in Bandar Sungai Long commercial hub
 const KNOWN_SUNGAI_LONG_LOCATIONS: Record<string, { lat: number; lng: number; address: string; gmapsQuery: string }> = {
   'Jalan SL 1/3': {
     lat: 3.04152,
@@ -83,15 +83,15 @@ export function calculateDistanceMeters(
 }
 
 /**
- * Generates an accurate Google Maps verified place info for a given FoodItem.
+ * Looks up a possible Google Maps match for a sample food listing.
  * Queries Google Maps Places library (Places API New) when available,
- * and seamlessly provides accurate real-world coordinates and direct Google Maps navigation links.
+ * Falls back to an approximate area and a search link when unavailable.
  */
 export async function getVerifiedPlaceInfo(
   item: FoodItem,
   placesLibrary?: typeof google.maps.places | null
 ): Promise<VerifiedPlaceInfo> {
-  const cacheKey = `${item.id}-${item.locationName}`;
+  const cacheKey = `${item.id}-${item.locationName}-${Boolean(placesLibrary)}`;
   if (placeCache.has(cacheKey)) {
     return placeCache.get(cacheKey)!;
   }
@@ -131,7 +131,7 @@ export async function getVerifiedPlaceInfo(
         maxResultCount: 1,
       });
 
-      if (searchResponse.places && searchResponse.places.length > 0) {
+      if (searchResponse.places?.[0]?.location && calculateDistanceMeters(UTAR_SL_COORDINATES, {lat: searchResponse.places[0].location.lat(), lng: searchResponse.places[0].location.lng()}) <= 3000) {
         const place = searchResponse.places[0];
         let placeLat = defaultCoord.lat;
         let placeLng = defaultCoord.lng;
@@ -161,7 +161,7 @@ export async function getVerifiedPlaceInfo(
           rating: place.rating || undefined,
           userRatingCount: place.userRatingCount || undefined,
           googleMapsURI: place.googleMapsURI || fallbackURI,
-          status: 'verified',
+          status: 'approximate', // A text-search match does not verify the original listing.
           distanceMeters: dist,
           walkingMinutes: Math.max(1, Math.round(dist / 75)), // ~75m per min average student walk
         };
@@ -174,7 +174,7 @@ export async function getVerifiedPlaceInfo(
     }
   }
 
-  // Baseline accurate Sungai Long place
+  // Approximate area fallback; not a verified shop position
   const dist = calculateDistanceMeters(UTAR_SL_COORDINATES, defaultCoord);
   const baselineInfo: VerifiedPlaceInfo = {
     name: item.locationName,
@@ -189,3 +189,4 @@ export async function getVerifiedPlaceInfo(
   placeCache.set(cacheKey, baselineInfo);
   return baselineInfo;
 }
+

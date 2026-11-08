@@ -96,3 +96,4 @@ export function playLoginSuccessSound(): void {
     console.warn('Audio playback note:', err);
   }
 }
+

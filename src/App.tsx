@@ -1,346 +1,96 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState, useEffect } from 'react';
-import {
-  FoodCategory,
-  FoodPreference,
-  FoodItem,
-  RecommendationResult,
-  DecisionRecord,
-  UserPreferences,
-} from './types/food';
-import { Header } from './components/Header';
+import React, { useEffect, useRef, useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthView } from './components/AuthView';
+import { Header, AppTab } from './components/Header';
 import { DecideFlow } from './components/DecideFlow';
 import { RecommendationCard } from './components/RecommendationCard';
 import { AcceptedTicketView } from './components/AcceptedTicketView';
 import { HistoryView } from './components/HistoryView';
-import { StatsView } from './components/StatsView';
-import { SettingsView } from './components/SettingsView';
-import { CAMPUSES } from './data/campuses';
+import { FoodCategory, FoodPreference, RecommendationResult } from './types/food';
 import { getRecommendation } from './services/recommendationEngine';
-import {
-  getHistory,
-  saveDecision,
-  removeDecision,
-  clearAllHistory,
-  resetToSeedHistory,
-  subscribeToUserDecisions,
-} from './services/historyService';
+import { getHistory, saveDecision, removeDecision, clearAllHistory, subscribeToUserDecisions } from './services/historyService';
 import { getPreferences, savePreferences } from './services/preferencesService';
-import { CheckCircle2 } from 'lucide-react';
-import { APIProvider } from '@vis.gl/react-google-maps';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { AuthView } from './components/AuthView';
-import { LoginLoadingScreen } from './components/LoginLoadingScreen';
+import { useMobileViewport } from './hooks/useMobileViewport';
+const StatsView = React.lazy(() => import('./components/StatsView').then(module => ({default:module.StatsView})));
+const SettingsView = React.lazy(() => import('./components/SettingsView').then(module => ({default:module.SettingsView})));
+const MapProvider = React.lazy(() => import('./components/MapProvider'));
 
-function MainApp() {
-  const { user, loading, justLoggedIn, clearJustLoggedIn } = useAuth();
-  const [activeTab, setActiveTab] = useState<'decide' | 'history' | 'stats' | 'settings'>('decide');
-  const [viewState, setViewState] = useState<'form' | 'result' | 'accepted'>('form');
-  const [quotaExceeded, setQuotaExceeded] = useState(false);
-
+function SessionApp() {
+  const { user } = useAuth();
+  const [tab, setTab] = useState<AppTab>('decide');
+  const [view, setView] = useState<'form' | 'result' | 'saved'>('form');
+  const [preferences, setPreferences] = useState(getPreferences);
+  const [history, setHistory] = useState(getHistory);
+  const [result, setResult] = useState<RecommendationResult | null>(null);
+  const [request, setRequest] = useState({ category: 'food' as FoodCategory, budget: 10, preference: 'anything' as FoodPreference });
+  const [excluded, setExcluded] = useState<string[]>([]);
+  const [message, setMessage] = useState('');
+  const [syncMessage, setSyncMessage] = useState('');
+  const [storageMessage, setStorageMessage] = useState('');
+  const [ready, setReady] = useState(Boolean(user?.isGuest));
+  const [syncFailed, setSyncFailed] = useState(false);
+  const [syncAttempt, setSyncAttempt] = useState(0);
+  const saveLock = useRef(false);
+  const title = useRef<HTMLElement>(null);
   useEffect(() => {
-    const handleQuota = () => setQuotaExceeded(true);
-    window.addEventListener('gmp-quota-exceeded', handleQuota);
-    return () => window.removeEventListener('gmp-quota-exceeded', handleQuota);
+    if (!user || user.isGuest) return;
+    setSyncFailed(false); setReady(false);
+    return subscribeToUserDecisions(user.uid, records => { setHistory(records);setReady(true);setSyncFailed(false);setSyncMessage(''); });
+  }, [user?.uid, syncAttempt]);
+  useEffect(() => {
+    const sync = () => {setSyncMessage('Your history could not sync. Check your connection and retry.');setSyncFailed(true);};
+    const storage = () => setStorageMessage('Browser storage is unavailable. Changes will only last until you close this page.');
+    window.addEventListener('decido-sync-error', sync);
+    window.addEventListener('decido-storage-warning', storage);
+    return () => {window.removeEventListener('decido-sync-error', sync);window.removeEventListener('decido-storage-warning', storage);};
   }, []);
-
-  // Preferences & History
-  const [preferences, setPreferencesState] = useState<UserPreferences>(() => getPreferences());
-  const [history, setHistoryState] = useState<DecisionRecord[]>(() => getHistory());
-
-  // Real-time sync with Firestore for authenticated user
-  useEffect(() => {
-    if (user && !user.isGuest) {
-      const unsubscribe = subscribeToUserDecisions(user.uid, (firestoreRecords) => {
-        if (firestoreRecords && firestoreRecords.length > 0) {
-          setHistoryState(firestoreRecords);
-        }
-      });
-      return () => unsubscribe();
-    }
-  }, [user]);
-
-  // Active Decision Session State
-  const [currentCategory, setCurrentCategory] = useState<FoodCategory>('food');
-  const [currentBudget, setCurrentBudget] = useState<number>(10);
-  const [currentPreference, setCurrentPreference] = useState<FoodPreference>('anything');
-  const [excludedIds, setExcludedIds] = useState<string[]>([]);
-  const [currentResult, setCurrentResult] = useState<RecommendationResult | null>(null);
-  const [isAccepted, setIsAccepted] = useState<boolean>(false);
-  const [decisionTryId, setDecisionTryId] = useState<number>(0);
-
-  // Toast feedback
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3500);
-  };
-
-  // Find active campus
-  const activeCampus = CAMPUSES.find((c) => c.id === preferences.campusId) || CAMPUSES[0];
-
-  // Handle deciding from the form
-  const handleDecide = (
-    category: FoodCategory,
-    budget: number,
-    preference: FoodPreference,
-    _naturalNote?: string
-  ) => {
-    setCurrentCategory(category);
-    setCurrentBudget(budget);
-    setCurrentPreference(preference);
-    setExcludedIds([]);
-    setIsAccepted(false);
-
-    const result = getRecommendation({
-      category,
-      budget,
-      preference,
-      campusId: preferences.campusId,
-      excludeItemIds: [],
-    });
-
-    if (result) {
-      setCurrentResult(result);
-      setViewState('result');
-      setExcludedIds([result.item.id]);
-      setDecisionTryId((prev) => prev + 1);
-    } else {
-      showToast('No meals found matching criteria. Try adjusting budget or restrictions.');
-    }
-  };
-
-  // Handle "Try another option"
-  const handleTryAnother = () => {
-    if (!currentResult) return;
-
-    setIsAccepted(false);
-    const nextResult = getRecommendation({
-      category: currentCategory,
-      budget: currentBudget,
-      preference: currentPreference,
-      campusId: preferences.campusId,
-      excludeItemIds: excludedIds,
-    });
-
-    if (nextResult) {
-      setCurrentResult(nextResult);
-      setExcludedIds((prev) => [...prev, nextResult.item.id]);
-    } else {
-      // Loop over: clear exclusions and try fresh
-      setExcludedIds([]);
-      const freshResult = getRecommendation({
-        category: currentCategory,
-        budget: currentBudget,
-        preference: currentPreference,
-        campusId: preferences.campusId,
-        excludeItemIds: [],
-      });
-      if (freshResult) {
-        setCurrentResult(freshResult);
-        setExcludedIds([freshResult.item.id]);
-        showToast('Cycled through all options. Showing top recommendation again!');
-      }
-    }
-  };
-
-  // Handle accepting recommendation ("I'll eat this today!")
-  const handleAccept = (item: FoodItem, reason: string) => {
-    saveDecision(item, reason);
-    setHistoryState(getHistory());
-    setIsAccepted(true);
-    setViewState('accepted');
-    showToast(`Saved to history! We'll avoid repeating "${item.name}" today.`);
-  };
-
-  // Handle back to edit form
-  const handleBackToEdit = () => {
-    setViewState('form');
-    setIsAccepted(false);
-  };
-
-  // History handlers
-  const handleRemoveHistoryItem = (id: string) => {
-    const updated = removeDecision(id);
-    setHistoryState(updated);
-    showToast('Decision removed from history.');
-  };
-
-  const handleClearHistory = () => {
-    clearAllHistory();
-    setHistoryState([]);
-    showToast('History cleared.');
-  };
-
-  const handleResetSeed = () => {
-    const seeded = resetToSeedHistory();
-    setHistoryState(seeded);
-    showToast('Sample 4-day student history loaded.');
-  };
-
-  // Preferences handler
-  const handleUpdatePreferences = (updates: Partial<UserPreferences>) => {
-    const updated = savePreferences(updates);
-    setPreferencesState(updated);
-    showToast('Preferences updated.');
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-50/60 to-stone-100">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-3xl shadow-sm animate-pulse">
-            🍜
-          </div>
-          <div className="w-6 h-6 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-semibold text-stone-600">Loading student session...</span>
-        </div>
-      </div>
-    );
+  useEffect(() => { title.current?.focus({preventScroll:true}); window.scrollTo(0,0); }, [tab]);
+  function decide(category: FoodCategory, budget: number, preference: FoodPreference) {
+    const next = {category,budget,preference};
+    const pick = getRecommendation({...next,campusId:preferences.campusId});
+    setRequest(next);setMessage('');saveLock.current=false;
+    if (!pick) {setMessage('No options fit this budget and your dietary settings. Try a different category or budget, or review your settings.');return;}
+    setResult(pick);setExcluded([pick.item.id]);setView('result');
   }
-
-  if (!user) {
-    return <AuthView />;
+  function another() {
+    const pick=getRecommendation({...request,campusId:preferences.campusId,excludeItemIds:excluded});
+    if (!pick) {setMessage('You’ve seen all the options that fit. Change your choices to look again.');return;}
+    setResult(pick);setExcluded(ids=>[...ids,pick.item.id]);
   }
-
-  if (justLoggedIn) {
-    return <LoginLoadingScreen user={user} onComplete={clearJustLoggedIn} />;
-  }
-
-  return (
-    <div className="min-h-screen flex flex-col bg-amber-50/30 text-stone-800">
-      {/* Google Maps Quota Banner (Case A requirement) */}
-      {quotaExceeded && (
-        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2.5 text-xs md:text-sm text-center sticky top-0 z-50 shadow-sm">
-          <span>
-            Google Maps Platform quota reached. If you are the app owner, visit{' '}
-            <a
-              href="https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline font-semibold text-amber-950 hover:text-amber-800"
-            >
-              maps developer site
-            </a>{' '}
-            for instructions to update your account.
-          </span>
-        </div>
-      )}
-
-      {/* Header */}
-      <Header
-        activeTab={activeTab}
-        setActiveTab={(tab) => {
-          setActiveTab(tab);
-          if (tab === 'decide') {
-            // Stay in current viewState if already decided
-          }
-        }}
-        campusName={activeCampus.shortCode}
-      />
-
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-3.5 sm:py-5 pb-24 sm:pb-8">
-        {/* Toast alert */}
-        {toastMessage && (
-          <div className="fixed bottom-20 sm:bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-stone-900 text-stone-100 text-xs font-semibold rounded-2xl shadow-lg shadow-stone-900/20 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <span>{toastMessage}</span>
-          </div>
-        )}
-
-        {/* Tab 1: Decide Assistant */}
-        {activeTab === 'decide' && (
-          <div>
-            {viewState === 'form' ? (
-              <DecideFlow
-                onDecide={handleDecide}
-                defaultBudgets={{
-                  food: preferences.defaultBudgetFood,
-                  drink: preferences.defaultBudgetDrink,
-                  dessert: preferences.defaultBudgetDessert,
-                }}
-              />
-            ) : viewState === 'accepted' && currentResult ? (
-              <AcceptedTicketView
-                item={currentResult.item}
-                budget={currentBudget}
-                onDecideAnother={handleBackToEdit}
-                onViewHistory={() => setActiveTab('history')}
-              />
-            ) : currentResult ? (
-              <RecommendationCard
-                result={currentResult}
-                budget={currentBudget}
-                onAccept={handleAccept}
-                onTryAnother={handleTryAnother}
-                onBackToEdit={handleBackToEdit}
-                isAccepted={isAccepted}
-                trySessionId={decisionTryId}
-                showSwipeGuidance={preferences.showSwipeGuidance !== false}
-              />
-            ) : (
-              <div className="text-center py-12">
-                <button
-                  type="button"
-                  onClick={handleBackToEdit}
-                  className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-semibold cursor-pointer"
-                >
-                  Start Decision
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 2: Decision History */}
-        {activeTab === 'history' && (
-          <HistoryView
-            history={history}
-            onRemoveItem={handleRemoveHistoryItem}
-            onClearAll={handleClearHistory}
-            onResetSeed={handleResetSeed}
-          />
-        )}
-
-        {/* Tab 3: Stats & Distribution */}
-        {activeTab === 'stats' && (
-          <StatsView
-            history={history}
-            onResetSeed={handleResetSeed}
-            onGoToDecide={() => setActiveTab('decide')}
-          />
-        )}
-
-        {/* Tab 4: Settings & Campus */}
-        {activeTab === 'settings' && (
-          <SettingsView
-            preferences={preferences}
-            onUpdatePreferences={handleUpdatePreferences}
-            onResetSeedHistory={handleResetSeed}
-          />
-        )}
-      </main>
-    </div>
-  );
+  return <div className="app-shell">
+    <a className="skip-link" href="#main-content">Skip to content</a>
+    <Header activeTab={tab} setActiveTab={setTab} campusName="UTAR Sungai Long" />
+    <main id="main-content" ref={title} tabIndex={-1} className="app-main">
+      {storageMessage && <p role="status" className="notice">{storageMessage}</p>}
+      {syncMessage && <div role="status" className="notice">{syncMessage} <button className="text-button" onClick={() => setSyncAttempt(n=>n+1)}>Retry sync</button></div>}
+      <div role="status" aria-live="polite">{message && <p className="notice">{message}</p>}</div>
+      {!ready && !user?.isGuest ? <section className="surface"><h1>{syncFailed ? 'Could not load your history' : 'Loading your history…'}</h1><p className="muted">{syncFailed ? 'Check your connection, then choose Retry sync above.' : 'Please wait while we get your saved choices.'}</p></section> : <>
+      {tab==='decide' && (view==='form' ? <DecideFlow initialSelection={result ? request : undefined} onDecide={decide} defaultBudgets={{food:preferences.defaultBudgetFood,drink:preferences.defaultBudgetDrink,dessert:preferences.defaultBudgetDessert}} /> : result && (view==='saved' ?
+        <AcceptedTicketView item={result.item} budget={request.budget} onDecideAnother={()=>{setView('form');setMessage('');}} onViewHistory={()=>setTab('history')} /> :
+        <RecommendationCard result={result} budget={request.budget} onTryAnother={another} onBackToEdit={()=>{setView('form');setMessage('');}} isAccepted={false} onAccept={(item, reason)=>{
+          if(saveLock.current) return;saveLock.current=true;
+          saveDecision(item,reason);setHistory(getHistory());setView('saved');setMessage('');
+        }} />))}
+      {tab==='history' && <HistoryView history={history} onRemoveItem={id=>setHistory(removeDecision(id))} onClearAll={async()=>{await clearAllHistory();setHistory(getHistory());}} onResetSeed={()=>{}} />}
+      <React.Suspense fallback={<p role="status">Loading…</p>}>
+      {tab==='stats' && <StatsView history={history} onGoToDecide={()=>setTab('decide')} onResetSeed={()=>{}} />}
+      {tab==='settings' && <SettingsView preferences={preferences} onUpdatePreferences={updates=>{
+        setPreferences(savePreferences(updates));setResult(null);setView('form');setExcluded([]);
+      }} onResetSeedHistory={()=>{}} />}
+      </React.Suspense>
+      </>}
+    </main>
+    <footer className="app-footer">Made for the “what should we eat?” moments.</footer>
+  </div>;
 }
-
+function AuthenticatedApp() {
+  const {user,loading}=useAuth();
+  if(loading) return <main className="auth-page" role="status">Loading Decido…</main>;
+  return user ? <SessionApp key={user.uid} /> : <AuthView />;
+}
 export default function App() {
-  return (
-    <APIProvider
-      apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}
-      libraries={['places', 'marker', 'geometry', 'core']}
-    >
-      <AuthProvider>
-        <MainApp />
-      </AuthProvider>
-    </APIProvider>
-  );
+  useMobileViewport();
+  const content=<AuthProvider><AuthenticatedApp /></AuthProvider>;
+  const mapsKey=import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  return mapsKey ? <React.Suspense fallback={<main className="auth-page" role="status">Loading Decido…</main>}><MapProvider apiKey={mapsKey}>{content}</MapProvider></React.Suspense> : content;
 }
