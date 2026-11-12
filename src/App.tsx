@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthView } from './components/AuthView';
 import { Header, AppTab } from './components/Header';
+import { WelcomeLoader } from './components/WelcomeLoader';
+import { DecidoLoader } from './components/DecidoLoader';
 import { DecideFlow } from './components/DecideFlow';
 import { RecommendationCard } from './components/RecommendationCard';
 import { AcceptedTicketView } from './components/AcceptedTicketView';
@@ -64,7 +66,7 @@ function SessionApp() {
       {storageMessage && <p role="status" className="notice">{storageMessage}</p>}
       {syncMessage && <div role="status" className="notice">{syncMessage} <button className="text-button" onClick={() => setSyncAttempt(n=>n+1)}>Retry sync</button></div>}
       <div role="status" aria-live="polite">{message && <p className="notice">{message}</p>}</div>
-      {!ready && !user?.isGuest ? <section className="surface"><h1>{syncFailed ? 'Could not load your history' : 'Loading your history…'}</h1><p className="muted">{syncFailed ? 'Check your connection, then choose Retry sync above.' : 'Please wait while we get your saved choices.'}</p></section> : <>
+      {!ready && !user?.isGuest ? <section className="surface">{syncFailed ? <><h1>Could not load your history</h1><p className="muted">Check your connection, then choose Retry sync above.</p></> : <DecidoLoader label="Loading your history…" />}</section> : <>
       {tab==='decide' && (view==='form' ? <DecideFlow initialSelection={result ? request : undefined} onDecide={decide} defaultBudgets={{food:preferences.defaultBudgetFood,drink:preferences.defaultBudgetDrink,dessert:preferences.defaultBudgetDessert}} /> : result && (view==='saved' ?
         <AcceptedTicketView item={result.item} budget={request.budget} onDecideAnother={()=>{setView('form');setMessage('');}} onViewHistory={()=>setTab('history')} /> :
         <RecommendationCard result={result} budget={request.budget} onTryAnother={another} onBackToEdit={()=>{setView('form');setMessage('');}} isAccepted={false} onAccept={(item, reason)=>{
@@ -72,7 +74,7 @@ function SessionApp() {
           saveDecision(item,reason);setHistory(getHistory());setView('saved');setMessage('');
         }} />))}
       {tab==='history' && <HistoryView history={history} onRemoveItem={id=>setHistory(removeDecision(id))} onClearAll={async()=>{await clearAllHistory();setHistory(getHistory());}} onResetSeed={()=>{}} />}
-      <React.Suspense fallback={<p role="status">Loading…</p>}>
+      <React.Suspense fallback={<DecidoLoader />}>
       {tab==='stats' && <StatsView history={history} onGoToDecide={()=>setTab('decide')} onResetSeed={()=>{}} />}
       {tab==='settings' && <SettingsView preferences={preferences} onUpdatePreferences={updates=>{
         setPreferences(savePreferences(updates));setResult(null);setView('form');setExcluded([]);
@@ -85,12 +87,20 @@ function SessionApp() {
 }
 function AuthenticatedApp() {
   const {user,loading}=useAuth();
-  if(loading) return <main className="auth-page" role="status">Loading Decido…</main>;
+  const [introFinished, setIntroFinished] = useState(
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
+  useEffect(() => {
+    if (introFinished) return;
+    const timeout = window.setTimeout(() => setIntroFinished(true), 650);
+    return () => window.clearTimeout(timeout);
+  }, [introFinished]);
+  if (loading || (!user && !introFinished)) return <main className="welcome-loading-page"><WelcomeLoader /></main>;
   return user ? <SessionApp key={user.uid} /> : <AuthView />;
 }
 export default function App() {
   useMobileViewport();
   const content=<AuthProvider><AuthenticatedApp /></AuthProvider>;
   const mapsKey=import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  return mapsKey ? <React.Suspense fallback={<main className="auth-page" role="status">Loading Decido…</main>}><MapProvider apiKey={mapsKey}>{content}</MapProvider></React.Suspense> : content;
+  return mapsKey ? <React.Suspense fallback={<main className="welcome-loading-page"><WelcomeLoader /></main>}><MapProvider apiKey={mapsKey}>{content}</MapProvider></React.Suspense> : content;
 }

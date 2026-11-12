@@ -1,3 +1,4 @@
+import { CategoryIllustration } from './CategoryIllustration';
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowUpRight, Check, ChevronDown, Clock3, Coffee, IceCreamBowl, MapPin, Shuffle, Sparkles, UtensilsCrossed, Wallet } from 'lucide-react';
 import { FoodCategory, FoodItem, RecommendationResult } from '../types/food';
@@ -70,11 +71,7 @@ export function RecommendationCard({
               <h1 id="suggestion-name" ref={heading} tabIndex={-1}>{item.name}</h1>
               <span className="pick-subcategory">{item.subcategory}</span>
             </div>
-            <div className="pick-art" aria-hidden="true">
-              <span className="pick-art-orbit" />
-              <span className="pick-art-food">{item.emoji}</span>
-              <span className="pick-art-spark">✦</span>
-            </div>
+            <CategoryIllustration className="pick-art" category={item.category} />
           </div>
           <dl className="pick-facts" data-reveal>
             <div>

@@ -1,3 +1,4 @@
+import { WelcomeLoader } from './WelcomeLoader';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { AnimatedPanel } from './AnimatedPanel';
@@ -18,8 +19,9 @@ export function AuthView() {
       <p>Set a budget and tell us what you feel like. We’ll help you choose.</p></div>
     <div className="surface" data-reveal>
       <button className="primary full" disabled={busy} onClick={signInAsGuest}>Try Decido as a guest</button>
-      <p className="small muted">No account needed. Guest history stays in this browser.</p>
+      <p className="small muted">No account needed. Guest history stays in this browser on this device.</p>
       <details className="account-details"><summary>Sign in to sync your history</summary>
+        <p className="small muted">Sign in with the same account on another device to see your saved choices. Firebase handles sign-in and stores your synced history. Other Decido users cannot see it.</p>
         <div className="segmented"><button disabled={busy} aria-pressed={mode === 'signin'} onClick={() => {setMode('signin');setMessage('');}}>Sign in</button>
           <button disabled={busy} aria-pressed={mode === 'signup'} onClick={() => {setMode('signup');setMessage('');}}>Create account</button></div>
         <form onSubmit={e => {e.preventDefault(); void submit(() => mode === 'signin' ? signInWithEmail(email.trim(), password) : signUpWithEmail(email.trim(), password));}}>
@@ -29,6 +31,7 @@ export function AuthView() {
           <button className="primary full" disabled={busy} type="submit">{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}</button>
         </form>
         <button className="secondary full" disabled={busy} onClick={() => void submit(signInWithGoogle)}>Continue with Google</button>
+        {busy && <WelcomeLoader label={mode === 'signup' ? 'Creating your account…' : 'Signing in…'} />}
       </details>
       {(message || error) && <p className="notice" role="alert">{message || error}</p>}
     </div>

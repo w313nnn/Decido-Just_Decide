@@ -1,3 +1,4 @@
+import { CategoryIllustration } from './CategoryIllustration';
 import React, { useEffect, useRef } from 'react';
 import { ArrowRight, Check, History } from 'lucide-react';
 import { FoodItem } from '../types/food';
@@ -27,7 +28,7 @@ export function AcceptedTicketView({ item, onDecideAnother, onViewHistory }: Acc
         <p>One less thing to think about.</p>
       </div>
       <div className="saved-choice" data-category={item.category} data-reveal>
-        <span className="saved-food" aria-hidden="true">{item.emoji}</span>
+        <CategoryIllustration className="saved-art" category={item.category} />
         <div>
           <h2>{item.name}</h2>
           <p>{item.locationName}</p>

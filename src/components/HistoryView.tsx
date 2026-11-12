@@ -1,3 +1,4 @@
+import { CategoryIllustration } from './CategoryIllustration';
 import React, { useState } from 'react';
 import { DecisionRecord } from '../types/food';
 import { formatRelativeDate } from '../services/historyService';
@@ -10,7 +11,7 @@ export function HistoryView({ history, onRemoveItem, onClearAll }: {
   return <AnimatedPanel scroll animationKey={history.map(r => r.id).join(',')} className="section-stack">
     <div className="page-intro" data-reveal><h1>Your history</h1><p>Choices you’ve saved. We use them to suggest a little more variety.</p></div>
     {history.length ? <><div className="row-between"><p className="muted">{history.length} saved {history.length === 1 ? 'choice' : 'choices'}</p><button className="text-button danger" onClick={() => setConfirm(true)}>Clear history</button></div>
-      {history.map(record => <article key={record.id} className="surface history-row" data-reveal><span className="history-emoji" aria-hidden="true">{record.emoji}</span>
+      {history.map(record => <article key={record.id} className="surface history-row" data-reveal><CategoryIllustration className="history-art" category={record.category} />
         <div className="grow"><p className="eyebrow">{formatRelativeDate(record.decidedAt)}</p><h2>{record.foodItemName}</h2><p className="small muted">{record.locationName}</p><p className="small">Listed price: RM{record.price.toFixed(2)}</p></div>
         <button className="text-button danger" aria-label={`Remove ${record.foodItemName} from history`} onClick={() => onRemoveItem(record.id)}>Remove</button>
       </article>)}

@@ -56,7 +56,9 @@ The layout checks cover 12 viewport sizes, from 320×480 to 1280×800, plus enla
 
 ## Test site
 
-Try the **[Decido test site](https://decido-test.urbanrain4.chatgpt.site)** in your browser. It is available to anyone with the link. Start with **Try Decido as a guest**. See [the testing guide](docs/TESTING.md) for phone checks, bug reports and publishing updates.
+The latest build is the **[Decido private preview](https://decido-preview.fancyjade4.chatgpt.site)**. Hosting access is restricted. The [older public demo](https://decido-test.urbanrain4.chatgpt.site) does not include the latest illustrations, loaders or dedicated Firebase setup. See [the testing guide](docs/TESTING.md).
+
+The current build includes illustrations for categories, suggestions and saved history, a welcome loader, and a centred plate-and-cutlery loading overlay. It keeps the warm orange theme without a dark/light switch. Vercel hosting is planned after testing.
 
 ## Running the project
 
@@ -73,7 +75,9 @@ Guest mode, the numbered decision flow and the description shortcut work without
 
 To enable the optional map preview, copy `.env.example` to `.env.local`, set `VITE_GOOGLE_MAPS_API_KEY` to your browser-restricted Google Maps key, and restart the development server. Without a key, suggestions still have Google Maps search links. Never put private Gemini or service-account keys in browser environment variables.
 
-Account sign-in and cloud history use the Firebase project in `firebase-applet-config.json`. To use your own project, replace that configuration, enable the required sign-in providers, allow your deployment domain, and deploy the repository's Firestore rules to the configured database. A failed sign-in does not create an account session; guest mode is a separate choice.
+Account sign-in and cloud history use the dedicated Firebase project `decido-e81d4` and its `(default)` Firestore database, configured in `firebase-applet-config.json`. Google sign-in is enabled for the private preview domain. Cross-device history sync still needs an end-to-end test. To use your own project, replace that configuration, enable the required sign-in providers, allow your deployment domain, and deploy the repository's Firestore rules to the configured database. A failed sign-in does not create an account session; guest mode is a separate choice.
+
+Firestore rules restrict client access to the signed-in account. Project administrators can access synced records; this is not end-to-end encryption.
 
 History and settings are separated by account in this browser. Guest data stays on this device. Account history syncs to Firestore; settings remain local to the browser and account. Unsynced saves and removals are kept locally for retry. Browser storage is not encrypted, so use your own device for personal history. Old shared prototype storage is left untouched but is not automatically assigned to an account.
 

@@ -1,3 +1,4 @@
+import { CategoryIllustration } from './CategoryIllustration';
 import React, { useRef, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import { FoodCategory, FoodPreference } from '../types/food';
@@ -69,10 +70,10 @@ export function DecideFlow({ onDecide, defaultBudgets, initialSelection }: Props
         <h2 ref={heading} tabIndex={-1} data-reveal>{step === 1 ? 'What are you looking for?' : step === 2 ? 'What’s your budget?' : 'What do you feel like?'}</h2>
         <p className="muted" data-reveal>{step === 1 ? 'Pick one to get started.' : step === 2 ? 'Your maximum for one item.' : 'Choose a craving, or leave it on Anything.'}</p>
         {step === 1 && <fieldset data-reveal><legend className="sr-only">Category</legend><div className="choice-grid three">
-          {([{id:'food',label:'Food',emoji:'🍚'}, {id:'drink',label:'Drink',emoji:'🥤'}, {id:'dessert',label:'Dessert',emoji:'🍰'}] as const).map(c =>
+          {([{id:'food',label:'Food'}, {id:'drink',label:'Drink'}, {id:'dessert',label:'Dessert'}] as const).map(c =>
             <label key={c.id} className={`choice ${category === c.id ? 'selected' : ''}`}>
               <input type="radio" name="category" value={c.id} checked={category === c.id} onChange={() => selectCategory(c.id)} />
-              <span className="choice-emoji" aria-hidden="true">{c.emoji}</span><span>{c.label}</span>
+              <CategoryIllustration className="choice-art" category={c.id} /><span>{c.label}</span>
             </label>)}
         </div></fieldset>}
         {step === 2 && <div data-reveal>

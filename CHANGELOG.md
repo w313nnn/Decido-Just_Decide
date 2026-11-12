@@ -6,6 +6,15 @@ Decido is currently a prototype. No historical release numbers or dates have bee
 
 ## [Unreleased]
 
+### Illustrations, loading and account setup
+
+- Added matching SVG illustrations to category choices, suggestions, accepted choices and history.
+- Added a welcome logo loader before guest/sign-in choices and a separate centred plate-and-cutlery overlay with a blurred backdrop inside the app.
+- Kept the warm logo-colour theme and removed the dark/light switch; loaders respect reduced-motion preferences.
+- Connected the preview to the dedicated Decido Firebase project and added Firestore deployment configuration and account-only history rules.
+- Kept guest history local to each browser. Google sign-in and cross-device history need end-to-end testing.
+- Documented the current private preview separately from the older public demo and clarified administrator access to synced data.
+
 ### Suggestion card design
 
 - Refined the palette around sampled logo orange, amber, coral and cream, replacing the green theme.
