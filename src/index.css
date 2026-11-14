@@ -325,3 +325,17 @@ input.budget-input { font-size: 1.8rem; font-weight: 650; }
 .choice-art { width: 3.5rem; max-width: 100%; }
 .saved-art { width: 3.5rem; flex-shrink: 0; }
 .history-art { width: 2.5rem; flex-shrink: 0; }
+
+/* The original item-specific artwork, shared by choices, suggestions and history. */
+.meal-art { --pick-art: #f6d6a8; --pick-accent: #8a4a24; position: relative; display: inline-grid; place-items: center; isolation: isolate; aspect-ratio: 1; flex-shrink: 0; line-height: 1; }
+.meal-art[data-category=drink] { --pick-art: #f3d488; --pick-accent: #8c591d; }
+.meal-art[data-category=dessert] { --pick-art: #f0b6a6; --pick-accent: #a04330; }
+.meal-art::before { content: ''; position: absolute; inset: 3px; border-radius: 42% 55% 47% 50%; background: var(--pick-art); transform: rotate(-12deg); z-index: -1; }
+.meal-art-orbit { position: absolute; inset: -2px; border: 1px dashed var(--pick-accent); opacity: .22; border-radius: 50%; transform: rotate(18deg); }
+.meal-art-image { font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; font-size: .65em; filter: drop-shadow(0 5px 3px #6a552216); }
+.meal-art-spark { position: absolute; right: -1px; top: -4px; color: var(--pick-accent); font-size: .16em; }
+.meal-art.pick-art { font-size: clamp(70px, 20vw, 118px); }
+.meal-art.choice-art { font-size: 3.5rem; }
+.meal-art.saved-art { font-size: 3.5rem; }
+.meal-art.history-art { font-size: 2.5rem; }
+@media (max-width: 360px) { .meal-art.pick-art { font-size: 64px; } }

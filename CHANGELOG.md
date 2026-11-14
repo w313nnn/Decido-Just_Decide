@@ -6,6 +6,12 @@ Decido is currently a prototype. No historical release numbers or dates have bee
 
 ## [Unreleased]
 
+### Meal-specific artwork restored
+
+- Restored the previous colour-emoji artwork with its soft backdrop, dotted circle and sparkle, replacing the three fixed SVG drawings.
+- Suggestions, saved choices and history now use each meal's own image value. Category tiles keep representative images in the same style.
+- Existing saved history works without a migration; missing images fall back to the category image.
+
 ### Illustrations, loading and account setup
 
 - Added matching SVG illustrations to category choices, suggestions, accepted choices and history.

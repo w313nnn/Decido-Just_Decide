@@ -71,7 +71,7 @@ export function RecommendationCard({
               <h1 id="suggestion-name" ref={heading} tabIndex={-1}>{item.name}</h1>
               <span className="pick-subcategory">{item.subcategory}</span>
             </div>
-            <CategoryIllustration className="pick-art" category={item.category} />
+            <CategoryIllustration className="pick-art" category={item.category} emoji={item.emoji} />
           </div>
           <dl className="pick-facts" data-reveal>
             <div>
